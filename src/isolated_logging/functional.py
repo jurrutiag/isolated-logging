@@ -19,6 +19,8 @@ _loop_stats = defaultdict(
     lambda: {"times": [], "iterations": 0}
 )  # Key: loop identifier, Value: dict with times and count
 
+_checkpoint_stats = defaultdict(lambda: {"times": [], "last_checkpoint": None})
+
 # ANSI escape codes for colors
 COLOR_RESET = "\033[0m"
 COLOR_BLUE = "\033[94m"
@@ -85,7 +87,6 @@ def log_timed_loop(
     iterable, ignore_instant_iterations=True, threshold=0.001, loop_id=None, loop_name=None
 ):
     """Logs the time taken for each iteration in a loop, calculates ETA if possible, and yields each element."""
-    log_file, logger = setup_log_file_and_logger()
 
     total_items = len(iterable) if hasattr(iterable, "__len__") else None
     start_time = time.time()
@@ -145,8 +146,6 @@ def log_timed_function(ignore_instant_returns, threshold=0.001):
     def decorator(func):
         @wraps(func)  # This line ensures the original function's metadata is preserved
         def wrapper(*args, **kwargs):
-            log_file, logger = setup_log_file_and_logger()
-
             _log_raw_message(
                 f"{COLOR_BLUE}Function {func.__name__} started with args: {COLOR_GRAY}{args}{COLOR_CYAN} and kwargs: {COLOR_GRAY}{kwargs}{COLOR_RESET}"
             )
@@ -183,6 +182,53 @@ def log_timed_function(ignore_instant_returns, threshold=0.001):
         return wrapper
 
     return decorator
+
+
+def log_checkpoint(checkpoint_id, message_on_reach=None):
+    """
+    Logs a checkpoint with a unique identifier, tracks the time since the last checkpoint,
+    and records relevant statistics for analysis.
+
+    Parameters:
+    - checkpoint_id (str): Unique identifier for the checkpoint.
+    - message_on_reach (str, optional): Custom message to log each time the checkpoint is reached.
+    """
+    log_file, logger = setup_log_file_and_logger()
+    current_time = time.time()
+
+    # Log custom message if provided
+    if message_on_reach:
+        _log_raw_message(f"{COLOR_CYAN}Checkpoint {checkpoint_id}: {message_on_reach}{COLOR_RESET}")
+
+    # Get the last checkpoint time if it exists
+    last_time = _checkpoint_stats[checkpoint_id]["last_checkpoint"]
+    if last_time is not None:
+        # Calculate elapsed time since the last checkpoint
+        elapsed_time = current_time - last_time
+        _checkpoint_stats[checkpoint_id]["times"].append(elapsed_time)
+        _log_raw_message(
+            f"{COLOR_PURPLE}Checkpoint {checkpoint_id}: Elapsed time since last checkpoint: {elapsed_time:.2f} seconds{COLOR_RESET}"
+        )
+    else:
+        _log_raw_message(
+            f"{COLOR_PURPLE}Checkpoint {checkpoint_id}: Initial checkpoint recorded{COLOR_RESET}"
+        )
+
+    # Update the last checkpoint time to the current time
+    _checkpoint_stats[checkpoint_id]["last_checkpoint"] = current_time
+
+    # Calculate average time between checkpoints for this ID
+    if _checkpoint_stats[checkpoint_id]["times"]:
+        avg_time = np.mean(_checkpoint_stats[checkpoint_id]["times"])
+        std_dev_time = (
+            np.std(_checkpoint_stats[checkpoint_id]["times"])
+            if len(_checkpoint_stats[checkpoint_id]["times"]) > 1
+            else 0.0
+        )
+        num_checks = len(_checkpoint_stats[checkpoint_id]["times"])
+        _log_raw_message(
+            f"{COLOR_DULL}Checkpoint {checkpoint_id}: Avg time: {avg_time:.2f} seconds, Std dev: {std_dev_time:.2f}, Total checks: {num_checks}{COLOR_RESET}"
+        )
 
 
 def close_log():
