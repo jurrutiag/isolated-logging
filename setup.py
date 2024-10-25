@@ -1,7 +1,12 @@
 from glob import glob
 from os.path import basename, splitext
+from pathlib import Path
 
 from setuptools import find_packages, setup
+
+# Read the README file
+HERE = Path(__file__).parent
+long_description = (HERE / "README.md").read_text()
 
 setup(
     name="isolated-logging",
@@ -9,6 +14,9 @@ setup(
     description="Utility to log in an isolated way",
     author="Juan Urrutia",
     author_email="juan.urrutia.gandolfo@gmail.com",
+    description="A Python library for tracking and logging function and loop execution times with stats and color-coded logs for easy performance monitoring and optimization.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/jurrutiag/isolated-logging",
     packages=find_packages("src"),
     package_dir={"": "src"},
