@@ -1,6 +1,7 @@
 from .functional import (
     cleanup_log,
     close_log,
+    log_checkpoint,
     log_list_elements,
     log_message,
     log_timed_function,
