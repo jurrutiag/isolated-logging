@@ -10,8 +10,7 @@ long_description = (HERE / "README.md").read_text()
 
 setup(
     name="isolated-logging",
-    version="0.0.1",
-    description="Utility to log in an isolated way",
+    version="0.0.2",
     author="Juan Urrutia",
     author_email="juan.urrutia.gandolfo@gmail.com",
     description="A Python library for tracking and logging function and loop execution times with stats and color-coded logs for easy performance monitoring and optimization.",
