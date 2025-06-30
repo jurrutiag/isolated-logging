@@ -22,16 +22,24 @@ _loop_stats = defaultdict(
 _checkpoint_stats = defaultdict(lambda: {"times": [], "last_checkpoint": None})
 
 # ANSI escape codes for colors
-COLOR_RESET = "\033[0m"
-COLOR_BLUE = "\033[94m"
-COLOR_GREEN = "\033[92m"
-COLOR_YELLOW = "\033[93m"
-COLOR_RED = "\033[91m"
-COLOR_CYAN = "\033[96m"
-COLOR_GRAY = "\033[90m"
-COLOR_PURPLE = "\033[95m"
-COLOR_DULL = "\033[37m"  # Dull white/gray color
-COLOR_ORANGE = "\033[38;5;214m"
+COLOR_DICT = {
+    "reset": "\033[0m",
+    "blue": "\033[94m",
+    "green": "\033[92m",
+    "yellow": "\033[93m",
+    "red": "\033[91m",
+    "cyan": "\033[96m",
+    "gray": "\033[90m",
+    "purple": "\033[95m",
+    "dull": "\033[37m",  # Dull white/gray color
+    "orange": "\033[38;5;214m",
+}
+
+
+def log_message_with_color(message, color_name):
+    """Logs a simple message to the temp log file with a specific color."""
+    colored_message = f"{COLOR_DICT[color_name]}{message}{COLOR_DICT['reset']}"
+    _log_raw_message(f"{colored_message}")
 
 
 def setup_log_file_and_logger(path=None, logger=None, setup_independent_logging=False):
@@ -72,15 +80,14 @@ def _log_raw_message(message, end="\n"):
 
 def log_message(message):
     """Logs a simple message to the temp log file."""
-    colored_message = f"{COLOR_BLUE}{message}{COLOR_RESET}"
-    _log_raw_message(f"{colored_message}")
+    log_message_with_color(message, "blue")
 
 
 def log_list_elements(elements):
     """Logs all elements in a list to the temp log file."""
-    _log_raw_message(f"{COLOR_GREEN}Logging list elements:{COLOR_RESET}")
+    log_message_with_color("Logging list elements:", "green")
     for element in elements:
-        _log_raw_message(f"{COLOR_BLUE}- {element}{COLOR_RESET}")
+        log_message_with_color(f"- {element}", "blue")
 
 
 def log_timed_loop(
@@ -99,7 +106,7 @@ def log_timed_loop(
     for i, item in enumerate(iterable):
         iter_start_time = time.time()
         _log_raw_message(
-            f"{COLOR_BLUE}{loop_name_str}Iteration {i+1}: Started processing {COLOR_GRAY}{item}{COLOR_RESET}"
+            f"{COLOR_DICT['blue']}{loop_name_str}Iteration {i+1}: Started processing {COLOR_DICT['gray']}{item}{COLOR_DICT['reset']}"
         )
 
         yield item  # Yield the current item for the loop to use
@@ -107,7 +114,7 @@ def log_timed_loop(
         iter_end_time = time.time()
         iter_elapsed_time = iter_end_time - iter_start_time
         _log_raw_message(
-            f"{COLOR_GREEN}{loop_name_str}Iteration {i+1}: Finished processing {COLOR_GRAY}{item} {COLOR_YELLOW}in {iter_elapsed_time:.2f} seconds{COLOR_RESET}"
+            f"{COLOR_DICT['green']}{loop_name_str}Iteration {i+1}: Finished processing {COLOR_DICT['gray']}{item} {COLOR_DICT['yellow']}in {iter_elapsed_time:.2f} seconds{COLOR_DICT['reset']}"
         )
 
         if ignore_instant_iterations and iter_elapsed_time < threshold:
@@ -126,14 +133,14 @@ def log_timed_loop(
             remaining_items = total_items - completed_items - instant_items
             eta = remaining_items * average_time_per_item
             _log_raw_message(
-                f"{COLOR_YELLOW}{loop_name_str}Iteration {i+1}: Estimated time remaining: {COLOR_YELLOW}{eta:.2f} seconds ({remaining_items} iterations remaining, Average time per item: {average_time_per_item:.2f} [s]){COLOR_RESET}"
+                f"{COLOR_DICT["yellow"]}{loop_name_str}Iteration {i+1}: Estimated time remaining: {COLOR_DICT["yellow"]}{eta:.2f} seconds ({remaining_items} iterations remaining, Average time per item: {average_time_per_item:.2f} [s]){COLOR_DICT["reset"]}"
             )
 
     # Log loop statistics
     average_iter_time = np.mean(_loop_stats[loop_identifier]["times"])
     iterations_per_sec = 1 / average_iter_time if average_iter_time > 0 else float("inf")
     _log_raw_message(
-        f"{COLOR_DULL}{loop_name_str}Loop ID {loop_identifier}: Average time per iteration: {average_iter_time:.2f} seconds ({iterations_per_sec:.2f} iterations per second). Total iterations: {_loop_stats[loop_identifier]['iterations']}.{COLOR_RESET}"
+        f"{COLOR_DICT["dull"]}{loop_name_str}Loop ID {loop_identifier}: Average time per iteration: {average_iter_time:.2f} seconds ({iterations_per_sec:.2f} iterations per second). Total iterations: {_loop_stats[loop_identifier]['iterations']}.{COLOR_DICT["reset"]}"
     )
 
 
@@ -147,7 +154,7 @@ def log_timed_function(ignore_instant_returns, threshold=0.001):
         @wraps(func)  # This line ensures the original function's metadata is preserved
         def wrapper(*args, **kwargs):
             _log_raw_message(
-                f"{COLOR_BLUE}Function {func.__name__} started with args: {COLOR_GRAY}{args}{COLOR_CYAN} and kwargs: {COLOR_GRAY}{kwargs}{COLOR_RESET}"
+                f"{COLOR_DICT["blue"]}Function {func.__name__} started with args: {COLOR_DICT["gray"]}{args}{COLOR_DICT["cyan"]} and kwargs: {COLOR_DICT["gray"]}{kwargs}{COLOR_DICT["reset"]}"
             )
 
             start_time = time.time()
@@ -162,7 +169,7 @@ def log_timed_function(ignore_instant_returns, threshold=0.001):
             _function_stats[func.__name__].append(elapsed_time)
 
             _log_raw_message(
-                f"{COLOR_GREEN}Function {func.__name__} finished {COLOR_YELLOW}in {elapsed_time:.2f} seconds{COLOR_RESET}"
+                f"{COLOR_DICT["green"]}Function {func.__name__} finished {COLOR_DICT["yellow"]}in {elapsed_time:.2f} seconds{COLOR_DICT["reset"]}"
             )
 
             # Calculate statistics
@@ -174,7 +181,7 @@ def log_timed_function(ignore_instant_returns, threshold=0.001):
             )
             num_calls = len(_function_stats[func.__name__])
             _log_raw_message(
-                f"{COLOR_DULL}Function {func.__name__}: Avg time: {avg_time:.2f} seconds, Std dev: {std_dev_time:.2f}, Calls: {num_calls}{COLOR_RESET}"
+                f"{COLOR_DICT["dull"]}Function {func.__name__}: Avg time: {avg_time:.2f} seconds, Std dev: {std_dev_time:.2f}, Calls: {num_calls}{COLOR_DICT["reset"]}"
             )
 
             return result
@@ -198,7 +205,9 @@ def log_checkpoint(checkpoint_id, message_on_reach=None):
 
     # Log custom message if provided
     if message_on_reach:
-        _log_raw_message(f"{COLOR_CYAN}Checkpoint {checkpoint_id}: {message_on_reach}{COLOR_RESET}")
+        _log_raw_message(
+            f"{COLOR_DICT["cyan"]}Checkpoint {checkpoint_id}: {message_on_reach}{COLOR_DICT["reset"]}"
+        )
 
     # Get the last checkpoint time if it exists
     last_time = _checkpoint_stats[checkpoint_id]["last_checkpoint"]
@@ -207,11 +216,11 @@ def log_checkpoint(checkpoint_id, message_on_reach=None):
         elapsed_time = current_time - last_time
         _checkpoint_stats[checkpoint_id]["times"].append(elapsed_time)
         _log_raw_message(
-            f"{COLOR_PURPLE}Checkpoint {checkpoint_id}: Elapsed time since last checkpoint: {elapsed_time:.2f} seconds{COLOR_RESET}"
+            f"{COLOR_DICT["purple"]}Checkpoint {checkpoint_id}: Elapsed time since last checkpoint: {elapsed_time:.2f} seconds{COLOR_DICT["reset"]}"
         )
     else:
         _log_raw_message(
-            f"{COLOR_PURPLE}Checkpoint {checkpoint_id}: Initial checkpoint recorded{COLOR_RESET}"
+            f"{COLOR_DICT["purple"]}Checkpoint {checkpoint_id}: Initial checkpoint recorded{COLOR_DICT["reset"]}"
         )
 
     # Update the last checkpoint time to the current time
@@ -227,8 +236,130 @@ def log_checkpoint(checkpoint_id, message_on_reach=None):
         )
         num_checks = len(_checkpoint_stats[checkpoint_id]["times"])
         _log_raw_message(
-            f"{COLOR_DULL}Checkpoint {checkpoint_id}: Avg time: {avg_time:.2f} seconds, Std dev: {std_dev_time:.2f}, Total checks: {num_checks}{COLOR_RESET}"
+            f"{COLOR_DICT["dull"]}Checkpoint {checkpoint_id}: Avg time: {avg_time:.2f} seconds, Std dev: {std_dev_time:.2f}, Total checks: {num_checks}{COLOR_DICT["reset"]}"
         )
+
+
+def timed_func(func, item, **kwargs):
+    """
+    Wraps the user function to measure execution time.
+    """
+    iter_start_time = time.time()
+    result = func(item, **kwargs)
+    iter_elapsed_time = time.time() - iter_start_time
+    return result, iter_elapsed_time, item
+
+
+def log_timed_parallel_loop(
+    iterable,
+    func,
+    func_kwargs,
+    n_jobs=1,
+    loop_name=None,
+    ignore_instant_iterations=True,
+    threshold=0.001,
+    raise_exceptions=False,
+):
+    """
+    Runs a function over an iterable in parallel, logs timing statistics.
+
+    Parameters:
+    - iterable: The iterable to process.
+    - func: The function to apply to each item in the iterable.
+    - n_jobs: Number of parallel jobs to run.
+    - loop_name: Name of the loop for logging purposes.
+    - ignore_instant_iterations: Whether to ignore iterations that take less than the threshold time.
+    - threshold: The time threshold to consider an iteration as 'instant'.
+    - **kwargs: Additional keyword arguments to pass to func.
+    """
+    total_items = len(iterable) if hasattr(iterable, "__len__") else None
+    loop_name_str = f"({loop_name}) " if loop_name else ""
+    start_time = time.time()
+    instant_items = 0
+    completed_items = 0
+    exception_items = 0
+
+    # Prepare for collecting timings and results
+    elapsed_times = []
+    results = []
+    errors = []
+
+    from loky import ProcessPoolExecutor, as_completed, get_reusable_executor
+
+    with get_reusable_executor(max_workers=n_jobs) as executor:
+        # Submit all tasks
+        futures = {
+            executor.submit(timed_func, func, item, **func_kwargs): item for item in iterable
+        }
+
+        for future in as_completed(futures):
+            item = futures[future]
+            try:
+                result, iter_elapsed_time, item = future.result()
+
+            except KeyboardInterrupt:
+                raise
+
+            except Exception as exc:
+                _log_raw_message(
+                    f"{COLOR_DICT["red"]}{loop_name_str}Exception for {item}: {exc}{COLOR_DICT["reset"]}"
+                )
+                if raise_exceptions:
+                    # Stop the loop if an exception occurs
+                    for f in futures:
+                        f.cancel()
+                    # Optionally shut down the executor
+                    executor.shutdown(wait=False)
+                    raise
+
+                else:
+                    errors.append(
+                        {
+                            "error": exc,
+                            "item": item,
+                            "func_kwargs": func_kwargs,
+                        }
+                    )
+
+                exception_items += 1
+                continue
+
+            if ignore_instant_iterations and iter_elapsed_time < threshold:
+                instant_items += 1
+                continue
+
+            completed_items += 1
+            elapsed_times.append(iter_elapsed_time)
+            results.append(result)
+
+            # Log the completion of the task
+            _log_raw_message(
+                f"{COLOR_DICT["green"]}{loop_name_str}Finished processing {COLOR_DICT["gray"]}{item} {COLOR_DICT["yellow"]}in {iter_elapsed_time:.2f} seconds{COLOR_DICT["reset"]}"
+            )
+
+            # Calculate and log ETA if the total length is known
+            if total_items is not None and completed_items > 0:
+                total_elapsed_time = time.time() - start_time
+                average_time_per_item = total_elapsed_time / completed_items
+                remaining_items = total_items - completed_items - instant_items - exception_items
+                eta = remaining_items * average_time_per_item
+                _log_raw_message(
+                    f"{COLOR_DICT["yellow"]}{loop_name_str}Estimated time remaining: {eta:.2f} seconds ({remaining_items} items remaining, Average time per item: {average_time_per_item:.2f} s){COLOR_DICT["reset"]}"
+                )
+
+    # Log loop statistics
+    if elapsed_times:
+        average_iter_time = np.mean(elapsed_times)
+        iterations_per_sec = 1 / average_iter_time if average_iter_time > 0 else float("inf")
+    else:
+        average_iter_time = 0
+        iterations_per_sec = float("inf")
+    total_iterations = len(elapsed_times)
+    _log_raw_message(
+        f"{COLOR_DICT["dull"]}{loop_name_str}Parallel loop completed: Average time per iteration: {average_iter_time:.2f} seconds ({iterations_per_sec:.2f} iterations per second). Total iterations: {total_iterations}.{COLOR_DICT["reset"]}"
+    )
+
+    return results, errors
 
 
 def close_log():
